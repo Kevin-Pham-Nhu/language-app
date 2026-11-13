@@ -163,8 +163,11 @@
       toggle('autoplay', 'Play audio automatically', 'Hear each word as it appears.'),
       toggle('listening', 'Listening exercises', 'Turn off when you can\'t use sound.'),
       h('div', { class: 'sheet-actions' },
-        h('button', { class: 'btn danger', type: 'button', onclick: () => {
-          if (confirm('Erase all your ' + course.name + ' progress? This cannot be undone.')) { Store.resetCourse(course.code); dlg.close(); }
+        h('button', { class: 'btn danger', type: 'button', onclick: e => {
+          // Two taps instead of a browser confirm box, which some embedded views block.
+          if (e.currentTarget.dataset.armed) { Store.resetCourse(course.code); dlg.close(); return; }
+          e.currentTarget.dataset.armed = '1';
+          e.currentTarget.textContent = 'Tap again to erase it all';
         } }, 'Reset ' + course.name + ' progress'),
         h('button', { class: 'btn primary', type: 'button', onclick: () => dlg.close() }, 'Done')));
     dlg.addEventListener('close', () => { dlg.remove(); renderCourse(); });
@@ -188,8 +191,16 @@
   }
 
   function quit() {
-    if (S && S.pos > 0 && !confirm('Leave this session? Your progress in it will be lost.')) return;
-    renderCourse();
+    if (!S || S.pos === 0) return renderCourse();
+    const dlg = h('dialog', { class: 'sheet' },
+      h('h2', {}, 'Leave this session?'),
+      h('p', { class: 'muted' }, 'Your progress in it will be lost.'),
+      h('div', { class: 'sheet-actions' },
+        h('button', { class: 'btn danger', type: 'button', onclick: () => { dlg.close(); renderCourse(); } }, 'Leave'),
+        h('button', { class: 'btn primary', type: 'button', onclick: () => dlg.close() }, 'Keep going')));
+    dlg.addEventListener('close', () => dlg.remove());
+    document.body.append(dlg);
+    dlg.showModal();
   }
 
   // First-try answers count towards accuracy; misses come back at the end of the session.
